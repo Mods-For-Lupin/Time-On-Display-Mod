@@ -1,9 +1,11 @@
 package com.cursee.time_on_display;
 
+import com.cursee.time_on_display.impl.client.ConfigReloadListener;
 import com.cursee.time_on_display.impl.client.TimeOnDisplayOverlay;
 import java.util.function.Consumer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -22,6 +24,9 @@ public class TimeOnDisplayClientNeoForge {
 
     modEventBus.addListener((Consumer<RegisterGuiLayersEvent>) event ->
         event.registerAboveAll(TimeOnDisplay.identifier(Constants.MOD_ID), TimeOnDisplayOverlay::render));
+
+    modEventBus.addListener((Consumer<AddClientReloadListenersEvent>) event ->
+        event.addListener(TimeOnDisplay.identifier("config"), new ConfigReloadListener()));
 
     NeoForge.EVENT_BUS.addListener((Consumer<ClientTickEvent.Post>) event -> TimeOnDisplayClient.tick());
   }
