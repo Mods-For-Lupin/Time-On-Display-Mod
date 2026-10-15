@@ -1,60 +1,35 @@
 package com.cursee.time_on_display.impl.client;
 
 import com.cursee.time_on_display.Constants;
-import com.electronwill.nightconfig.core.Config;
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import java.io.File;
-import java.nio.file.Files;
+import io.github.jason13official.monolib.api.common.EnvironmentSide;
+import io.github.jason13official.monolib.api.common.config.ConfigGetterSetter.Commented;
+import io.github.jason13official.monolib.impl.common.config.ModSidedConfigIO;
 import java.nio.file.Path;
+import java.util.List;
 
 public class TimeOnDisplayConfig {
 
     public static boolean displayEnabled = true;
+    public static Commented<Boolean> DISPLAY_ENABLED = new Commented<>("displayEnabled", () -> displayEnabled, value -> displayEnabled = value, "Whether the display can be shown at all.");
     public static boolean displayOnlySystemTime = false;
+    public static Commented<Boolean> DISPLAY_ONLY_SYSTEM_TIME = new Commented<>("displayOnlySystemTime", () -> displayOnlySystemTime, value -> displayOnlySystemTime = value, "Whether to hide the game time and only show the system time.");
     public static boolean displayClockIcons = true;
+    public static Commented<Boolean> DISPLAY_CLOCK_ICONS = new Commented<>("displayClockIcons", () -> displayClockIcons, value -> displayClockIcons = value, "Whether to show clock icons beside the times.");
     public static boolean display24Hour = false;
-
+    public static Commented<Boolean> DISPLAY_24_HOUR = new Commented<>("display24Hour", () -> display24Hour, value -> display24Hour = value, "Whether the system time uses 24-hour format.");
     public static String displayLocation = "upper-left";
+    public static Commented<String> DISPLAY_LOCATION = new Commented<>("displayLocation", () -> displayLocation, value -> displayLocation = value, "Can be lower-left, upper-left, upper-middle, upper-right, or lower-right (in quotes) for alternate positions.");
     public static String displaySystemTimeIcon = "";
+    public static Commented<String> DISPLAY_SYSTEM_TIME_ICON = new Commented<>("displaySystemTimeIcon", () -> displaySystemTimeIcon, value -> displaySystemTimeIcon = value, "Can be 1 or 2 (in quotes) for alternate icons.");
 
     public static void load(Path configDir) {
-        File configDirectory = new File(configDir.toUri());
-        if (!configDirectory.isDirectory() && !configDirectory.mkdirs()) {
-            Constants.LOG.info("Failed to get or create config directory {}", configDirectory.getAbsolutePath());
-            return;
-        }
-
-        Path configFilepath = configDir.resolve(Constants.MOD_ID + ".toml");
-        File configFile = new File(configFilepath.toUri());
-
-        boolean insertionOrderPreserved = Config.isInsertionOrderPreserved();
-        Config.setInsertionOrderPreserved(true);
-        try (CommentedFileConfig config = CommentedFileConfig.builder(configFile).build()) {
-            if (Files.exists(configFilepath)) {
-                config.load();
-            }
-            displayEnabled = config.getOrElse("displayEnabled", displayEnabled);
-            displayOnlySystemTime = config.getOrElse("displayOnlySystemTime", displayOnlySystemTime);
-            displayClockIcons = config.getOrElse("displayClockIcons", displayClockIcons);
-            display24Hour = config.getOrElse("display24Hour", display24Hour);
-            displayLocation = config.getOrElse("displayLocation", displayLocation);
-            displaySystemTimeIcon = config.getOrElse("displaySystemTimeIcon", displaySystemTimeIcon);
-            config.remove("_comment1");
-            config.remove("_comment2");
-
-            config.set("displayEnabled", displayEnabled);
-            config.set("displayOnlySystemTime", displayOnlySystemTime);
-            config.set("displayClockIcons", displayClockIcons);
-            config.set("display24Hour", display24Hour);
-            config.setComment("displayLocation", " displayLocation can be lower-left, upper-left, upper-middle, upper-right, or lower-right (in quotes) for alternate positions");
-            config.set("displayLocation", displayLocation);
-            config.setComment("displaySystemTimeIcon", " displaySystemTimeIcon can be 1 or 2 (in quotes) for alternate icons");
-            config.set("displaySystemTimeIcon", displaySystemTimeIcon);
-            config.save();
-        } catch (Exception e) {
-            Constants.LOG.error(e.getMessage());
-            Constants.LOG.info("Failed to read or write config file {}", configFile.getAbsolutePath());
-        }
-        Config.setInsertionOrderPreserved(insertionOrderPreserved);
+        ModSidedConfigIO.load(configDir, Constants.MOD_ID, EnvironmentSide.CLIENT, List.of(
+            DISPLAY_ENABLED,
+            DISPLAY_ONLY_SYSTEM_TIME,
+            DISPLAY_CLOCK_ICONS,
+            DISPLAY_24_HOUR,
+            DISPLAY_LOCATION,
+            DISPLAY_SYSTEM_TIME_ICON
+        ));
     }
 }
