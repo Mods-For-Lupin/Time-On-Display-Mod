@@ -1,37 +1,148 @@
-plugins {
-    // Required for NeoGradle
-    id "org.jetbrains.gradle.plugin.idea-ext" version "1.1.7"
-
-    // Required for Forgix
-    id "io.github.pacifistmc.forgix" version "1.2.9"
+buildscript {
+  dependencies {
+    // same thing forgix uses
+    classpath 'me.lucko:jar-relocator:1.7'
+  }
 }
 
-forgix {
-    group = "${project.group}" // same as targetting ${group}, just not sure if expandProps occurs before this
-    mergedJarName = "${mod_id}-merged-${minecraft_version}-${project.version}.jar"
-    outputDir = "build/libs"
+import me.lucko.jarrelocator.JarRelocator
+import me.lucko.jarrelocator.Relocation
 
-    custom {
-        projectName = "common"
-        jarLocation = "build/libs/${mod_id}-common-${minecraft_version}-${project.version}.jar"
+plugins {
+    // see https://fabricmc.net/develop/ for new versions
+    id 'net.fabricmc.fabric-loom' version '1.15.5' apply(false)
+    // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
+    id 'net.neoforged.moddev' version '2.0.141' apply(false)
+}
+
+// force :fabric and :neoforge to configure so remapJar/jar are registered before reference
+evaluationDependsOn(':fabric')
+evaluationDependsOn(':neoforge')
+
+// same thing forgix uses
+def isProbablyTextFile(File file) {
+  def size = Math.min(file.length(), 4096L) as int
+  if (size == 0) return true
+  def data = new byte[size]
+  file.withInputStream { it.read(data, 0, size) }
+  return !data.any { it == (byte) 0 }
+}
+
+// relocate platform jar to loader specific prefixes for a final merged jar
+// jar-relocator handles .class bytecode rewrites, otherwise we use substring replace
+def relocateLoaderJar(File input, File output, String loaderPrefix, String group) {
+  def relocatedJar = new File(output.parentFile, "${output.name}.bytecode-relocated.jar")
+  relocatedJar.delete()
+  new JarRelocator(input, relocatedJar, [new Relocation(group, "${loaderPrefix}.${group}")]).run()
+
+  def workDir = new File(output.parentFile, "${loaderPrefix}-work")
+  if (workDir.exists()) workDir.deleteDir()
+  workDir.mkdirs()
+  ant.unzip(src: relocatedJar, dest: workDir)
+
+  // Rename loader-identifying resources so fabric's and neoforge's copies of the
+  // same-named file (e.g. both ship a "<mod_id>.mixins.json") don't collide on merge.
+  def renames = [:]
+  workDir.eachFileRecurse { file ->
+    if (!file.isFile()) return
+    if (file.name.endsWith('.accesswidener')) {
+      renames[file.name] = "${loaderPrefix}-${file.name}"
+    } else if (file.name.endsWith('.json') && isProbablyTextFile(file)) {
+      def text = file.text
+      if (text.contains('"package":') || text.contains('"mappings":') || text.contains('"data":')) {
+        renames[file.name] = "${loaderPrefix}-${file.name}"
+      }
     }
-
-    fabric {
-        projectName = "fabric"
-        jarLocation = "build/libs/${mod_id}-fabric-${minecraft_version}-${project.version}.jar"
+  }
+  renames.each { oldName, newName ->
+    workDir.eachFileRecurse { file ->
+      if (file.isFile() && file.name == oldName) {
+        file.renameTo(new File(file.parentFile, newName))
+      }
     }
+  }
 
-//    forge {
-//        projectName = "forge"
-//        jarLocation = "build/libs/${mod_id}-forge-${minecraft_version}-${project.version}.jar"
-//
-//        mixin "${mod_id}.forge.mixins.json"
-//    }
+  // fix references to the relocated package or renamed files
+  def groupPath = group.replace('.', '/')
+  def replacements = [(group): "${loaderPrefix}.${group}", (groupPath): "${loaderPrefix}/${groupPath}"] + renames
+  workDir.eachFileRecurse { file ->
+    // META-INF/services entries were already correctly renamed/rewritten by
+    // JarRelocator itself; touching them again here would double the prefix.
+    if (!file.isFile() || file.name.endsWith('.class') || !isProbablyTextFile(file)) return
+    if (file.parentFile.name == 'services' && file.parentFile.parentFile?.name == 'META-INF') return
+    // MANIFEST.MF hard-wraps lines at 72 bytes, so a naive substring replace on the raw
+    // text can miss a match that the wrap splits across two lines.
+    if (file.name == 'MANIFEST.MF' && file.parentFile.name == 'META-INF') return
+    def text = file.text
+    def newText = text
+    replacements.each { from, to -> newText = newText.replace(from, to) }
+    if (newText != text) file.text = newText
+  }
 
-    neoforge {
-        projectName = "neoforge"
-        jarLocation = "build/libs/${mod_id}-neoforge-${minecraft_version}-${project.version}.jar"
-
-        mixin "${mod_id}.neoforge.mixins.json"
+  def manifestFile = new File(workDir, 'META-INF/MANIFEST.MF')
+  if (manifestFile.exists()) {
+    def jarManifest
+    manifestFile.withInputStream { jarManifest = new java.util.jar.Manifest(it) }
+    def attributes = jarManifest.mainAttributes
+    def updates = [:]
+    attributes.each { key, value ->
+      def newValue = value.toString()
+      replacements.each { from, to -> newValue = newValue.replace(from, to) }
+      if (newValue != value.toString()) updates[key.toString()] = newValue
     }
+    updates.each { name, value -> attributes.putValue(name, value) }
+    manifestFile.withOutputStream { jarManifest.write(it) }
+  }
+
+  output.delete()
+  ant.zip(destFile: output, basedir: workDir)
+  workDir.deleteDir()
+  relocatedJar.delete()
+}
+
+tasks.register('mergeJarsCustom', Jar) {
+  group = 'distribution'
+  description = 'Relocates :fabric and :neoforge output under loader-specific packages (same approach as Forgix) and merges them into build/merged/.'
+
+  def fabricJarTask = project(':fabric').tasks.named('jar')
+  def neoforgeJarTask = project(':neoforge').tasks.named('jar')
+
+  dependsOn(fabricJarTask, neoforgeJarTask)
+
+  def workDir = layout.buildDirectory.dir('tmp/mergeJarsCustom')
+  def fabricRelocated = workDir.map { it.file('fabric-relocated.jar') }
+  def neoforgeRelocated = workDir.map { it.file('neoforge-relocated.jar') }
+
+  destinationDirectory.set(layout.buildDirectory.dir('merged'))
+  archiveFileName.set("${mod_id}-merged-${minecraft_version}-${version}.jar")
+
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+  doFirst {
+    workDir.get().asFile.mkdirs()
+    relocateLoaderJar(fabricJarTask.get().archiveFile.get().asFile, fabricRelocated.get().asFile, 'fabric', project.group.toString())
+    relocateLoaderJar(neoforgeJarTask.get().archiveFile.get().asFile, neoforgeRelocated.get().asFile, 'neoforge', project.group.toString())
+
+    // make sure we don't overwrite the manifest every time
+    [fabricRelocated, neoforgeRelocated].each { jarProvider ->
+      new java.util.jar.JarFile(jarProvider.get().asFile).withCloseable { jarFile ->
+        jarFile.manifest?.mainAttributes?.each { key, value ->
+          def name = key.toString()
+          if (name != 'Manifest-Version') {
+            manifest.attributes([(name): value.toString()])
+          }
+        }
+      }
+    }
+  }
+
+  from(zipTree(fabricRelocated))
+  from(zipTree(neoforgeRelocated))
+}
+
+// Define build explicitly so we can hang mergeJarsCustom off of it
+tasks.register('build') {
+  group = 'build'
+  description = 'Aggregate build: builds common/fabric/neoforge and produces the merged jar.'
+  dependsOn(':common:build', ':fabric:build', ':neoforge:build', 'mergeJarsCustom')
 }

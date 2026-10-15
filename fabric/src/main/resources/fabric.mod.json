@@ -8,8 +8,8 @@
         "${mod_author}"
     ],
     "contact": {
-        "homepage": "https://fabricmc.net/",
-        "sources": "https://github.com/FabricMC/fabric-example-mod"
+        "homepage": "${mod_url}",
+        "sources": "${mod_url}"
     },
     "license": "${license}",
     "icon": "${mod_id}.png",
@@ -29,9 +29,8 @@
     "depends": {
         "fabricloader": ">=${fabric_loader_version}",
         "fabric-api": "*",
-        "minecraft": "${minecraft_version}",
-        "java": ">=${java_version}",
-        "monolib": ">=1.3.0"
+        "minecraft": "${fabric_minecraft_version_range}",
+        "java": ">=${java_version}"
     },
     "suggests": {
         "another-mod": "*"

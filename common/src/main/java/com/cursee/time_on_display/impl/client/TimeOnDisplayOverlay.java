@@ -1,27 +1,26 @@
-package com.cursee.time_on_display.core;
+package com.cursee.time_on_display.impl.client;
 
-import com.cursee.time_on_display.Constants;
-import com.cursee.time_on_display.TimeOnDisplayFabricClient;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import com.cursee.time_on_display.TimeOnDisplay;
+import com.cursee.time_on_display.TimeOnDisplayClient;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 import java.time.LocalTime;
 
-public class TimeOnDisplayOverlayFabric implements HudRenderCallback {
+public class TimeOnDisplayOverlay {
 
-    public static final ResourceLocation DEFAULT_CLOCK = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/display/default_clock.png");
-    public static final ResourceLocation ALTERNATE_CLOCK_1 = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/display/alternate_clock_1.png");
-    public static final ResourceLocation ALTERNATE_CLOCK_2 = ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/display/alternate_clock_2.png");
+    public static final Identifier DEFAULT_CLOCK = TimeOnDisplay.identifier("textures/display/default_clock.png");
+    public static final Identifier ALTERNATE_CLOCK_1 = TimeOnDisplay.identifier("textures/display/alternate_clock_1.png");
+    public static final Identifier ALTERNATE_CLOCK_2 = TimeOnDisplay.identifier("textures/display/alternate_clock_2.png");
 
     // todo: re-write this mess, it's disgusting lol
 
-    @Override
-    public void onHudRender(GuiGraphics graphics, DeltaTracker delta) {
+    public static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
 
         // gather configuration values
         final boolean displayEnabled = TimeOnDisplayConfig.displayEnabled;
@@ -37,7 +36,7 @@ public class TimeOnDisplayOverlayFabric implements HudRenderCallback {
         final int highestX = graphics.guiWidth();
         final int highestY = graphics.guiHeight();
         
-        if (displayEnabled && TimeOnDisplayFabricClient.displayToggle) {
+        if (displayEnabled && TimeOnDisplayClient.displayToggle) {
             
             // initialize default positions
             int gameClockIconX = 0, gameClockIconY = 0, gameClockTextX = 0, gameClockTextY = 0;
@@ -58,7 +57,7 @@ public class TimeOnDisplayOverlayFabric implements HudRenderCallback {
             String minecraft_time = "";
             if (Minecraft.getInstance().level != null) {
                 Level level = Minecraft.getInstance().level;
-                minecraft_time = String.valueOf(level.getDayTime());
+                minecraft_time = String.valueOf(level.getOverworldClockTime());
             } else {
                 minecraft_time = "0";
             }
@@ -157,15 +156,15 @@ public class TimeOnDisplayOverlayFabric implements HudRenderCallback {
             
             // final rendering to screen
             switch (displaySystemTimeIcon) {
-                case "1" -> graphics.blit(ALTERNATE_CLOCK_1,    systemClockIconX, systemClockIconY, 0, 0.0f, 0.0f, 16, 16, 16, 16);
-                case "2" -> graphics.blit(ALTERNATE_CLOCK_2,    systemClockIconX, systemClockIconY, 0, 0.0f, 0.0f, 16, 16, 16, 16);
-                default -> graphics.blit(DEFAULT_CLOCK,         systemClockIconX, systemClockIconY, 0, 0.0f, 0.0f, 16, 16, 16, 16);
+                case "1" -> graphics.blit(RenderPipelines.GUI_TEXTURED, ALTERNATE_CLOCK_1,    systemClockIconX, systemClockIconY, 0.0f, 0.0f, 16, 16, 16, 16);
+                case "2" -> graphics.blit(RenderPipelines.GUI_TEXTURED, ALTERNATE_CLOCK_2,    systemClockIconX, systemClockIconY, 0.0f, 0.0f, 16, 16, 16, 16);
+                default -> graphics.blit(RenderPipelines.GUI_TEXTURED, DEFAULT_CLOCK,         systemClockIconX, systemClockIconY, 0.0f, 0.0f, 16, 16, 16, 16);
             }
 
-            graphics.renderItem(Items.CLOCK.getDefaultInstance(), gameClockIconX, gameClockIconY);
+            graphics.item(Items.CLOCK.getDefaultInstance(), gameClockIconX, gameClockIconY);
 
-            graphics.drawString(Minecraft.getInstance().font, time, systemClockTextX, systemClockTextY, 0xFFFFFFFF, false);
-            graphics.drawString(Minecraft.getInstance().font, minecraft_time, gameClockTextX, gameClockTextY, 0xFFFFFFFF, false);
+            graphics.text(Minecraft.getInstance().font, time, systemClockTextX, systemClockTextY, 0xFFFFFFFF, false);
+            graphics.text(Minecraft.getInstance().font, minecraft_time, gameClockTextX, gameClockTextY, 0xFFFFFFFF, false);
         }
     }
 }
