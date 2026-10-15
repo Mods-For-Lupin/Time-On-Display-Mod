@@ -8,12 +8,12 @@ import net.neoforged.fml.loading.FMLLoader;
 @Mod(Constants.MOD_ID)
 public class TimeOnDisplayNeoForge {
 
-    public TimeOnDisplayNeoForge(IEventBus bus) {
+  public TimeOnDisplayNeoForge(IEventBus bus) {
 
-        TimeOnDisplay.init();
+    TimeOnDisplay.init();
 
-        if (FMLLoader.getCurrent().getDist() == Dist.CLIENT) {
-            new TimeOnDisplayClientNeoForge(bus);
-        }
+    if (FMLLoader.getCurrent().getDist() == Dist.CLIENT) {
+      new TimeOnDisplayClientNeoForge(bus);
     }
+  }
 }

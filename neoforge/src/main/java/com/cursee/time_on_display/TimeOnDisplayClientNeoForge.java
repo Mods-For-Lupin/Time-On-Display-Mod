@@ -11,18 +11,18 @@ import net.neoforged.neoforge.common.NeoForge;
 
 public class TimeOnDisplayClientNeoForge {
 
-    public TimeOnDisplayClientNeoForge(final IEventBus modEventBus) {
+  public TimeOnDisplayClientNeoForge(final IEventBus modEventBus) {
 
-        modEventBus.addListener((Consumer<FMLClientSetupEvent>) event -> TimeOnDisplayClient.init());
+    modEventBus.addListener((Consumer<FMLClientSetupEvent>) event -> TimeOnDisplayClient.init());
 
-        modEventBus.addListener((Consumer<RegisterKeyMappingsEvent>) event -> {
-            event.registerCategory(TimeOnDisplayClient.KEY_CATEGORY);
-            event.register(TimeOnDisplayClient.TOGGLE_KEY);
-        });
+    modEventBus.addListener((Consumer<RegisterKeyMappingsEvent>) event -> {
+      event.registerCategory(TimeOnDisplayClient.KEY_CATEGORY);
+      event.register(TimeOnDisplayClient.TOGGLE_KEY);
+    });
 
-        modEventBus.addListener((Consumer<RegisterGuiLayersEvent>) event ->
-            event.registerAboveAll(TimeOnDisplay.identifier(Constants.MOD_ID), TimeOnDisplayOverlay::render));
+    modEventBus.addListener((Consumer<RegisterGuiLayersEvent>) event ->
+        event.registerAboveAll(TimeOnDisplay.identifier(Constants.MOD_ID), TimeOnDisplayOverlay::render));
 
-        NeoForge.EVENT_BUS.addListener((Consumer<ClientTickEvent.Post>) event -> TimeOnDisplayClient.tick());
-    }
+    NeoForge.EVENT_BUS.addListener((Consumer<ClientTickEvent.Post>) event -> TimeOnDisplayClient.tick());
+  }
 }

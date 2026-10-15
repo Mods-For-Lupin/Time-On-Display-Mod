@@ -9,12 +9,12 @@ import net.minecraft.client.KeyMapping;
 
 public class TimeOnDisplayFabricClient implements ClientModInitializer {
 
-    @Override
-    public void onInitializeClient() {
-        TimeOnDisplayClient.init();
-        KeyMapping.Category.register(TimeOnDisplayClient.KEY_CATEGORY.id());
-        KeyMappingHelper.registerKeyMapping(TimeOnDisplayClient.TOGGLE_KEY);
-        ClientTickEvents.END_CLIENT_TICK.register(client -> TimeOnDisplayClient.tick());
-        HudElementRegistry.addLast(TimeOnDisplay.identifier(Constants.MOD_ID), TimeOnDisplayOverlay::render);
-    }
+  @Override
+  public void onInitializeClient() {
+    TimeOnDisplayClient.init();
+    KeyMapping.Category.register(TimeOnDisplayClient.KEY_CATEGORY.id());
+    KeyMappingHelper.registerKeyMapping(TimeOnDisplayClient.TOGGLE_KEY);
+    ClientTickEvents.END_CLIENT_TICK.register(client -> TimeOnDisplayClient.tick());
+    HudElementRegistry.addLast(TimeOnDisplay.identifier(Constants.MOD_ID), TimeOnDisplayOverlay::render);
+  }
 }
