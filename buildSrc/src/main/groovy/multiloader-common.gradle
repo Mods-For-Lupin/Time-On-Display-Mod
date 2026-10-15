@@ -29,6 +29,19 @@ repositories {
         name = 'BlameJared'
         url = 'https://maven.blamejared.com'
     }
+  maven {
+    url = "https://api.modrinth.com/maven"
+  }
+  exclusiveContent {
+    forRepository { ivy {
+      url 'https://github.com/Mods-For-Lupin/MonoLib/releases/download'
+      patternLayout {
+        artifact 'common-[revision]/[artifact]-[revision](-[classifier]).jar'
+      }
+      metadataSources { artifact() }
+    } }
+    filter { includeGroup 'monolib' }
+  }
 }
 
 sourcesJar {
