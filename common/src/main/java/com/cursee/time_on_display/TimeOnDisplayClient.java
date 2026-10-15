@@ -16,7 +16,9 @@ public class TimeOnDisplayClient {
   public static boolean displayToggle = false;
 
   public static void init() {
-    TimeOnDisplayConfig.load(Services.PLATFORM.getConfigDirectory());
+
+    // TODO resource load events should do this for us?
+    // TimeOnDisplayConfig.load(Services.PLATFORM.getConfigDirectory());
   }
 
   public static void tick() {

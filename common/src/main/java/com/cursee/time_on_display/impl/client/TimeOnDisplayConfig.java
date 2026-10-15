@@ -26,14 +26,17 @@ public class TimeOnDisplayConfig {
   public static Commented<String> DISPLAY_SYSTEM_TIME_ICON = new Commented<>("displaySystemTimeIcon", () -> displaySystemTimeIcon, value -> displaySystemTimeIcon = value,
       "Can be 1 or 2 (in quotes) for alternate icons.");
 
+  public static final List<Commented<?>> ENTRIES = List.of(
+      DISPLAY_ENABLED,
+      DISPLAY_ONLY_SYSTEM_TIME,
+      DISPLAY_CLOCK_ICONS,
+      DISPLAY_24_HOUR,
+      DISPLAY_LOCATION,
+      DISPLAY_SYSTEM_TIME_ICON
+  );
+
   public static void load(Path configDir) {
-    ModSidedConfigIO.load(configDir, Constants.MOD_ID, EnvironmentSide.CLIENT, List.of(
-        DISPLAY_ENABLED,
-        DISPLAY_ONLY_SYSTEM_TIME,
-        DISPLAY_CLOCK_ICONS,
-        DISPLAY_24_HOUR,
-        DISPLAY_LOCATION,
-        DISPLAY_SYSTEM_TIME_ICON
-    ));
+    LegacyConfigAdapter.migrate(configDir, ENTRIES);
+    ModSidedConfigIO.load(configDir, Constants.MOD_ID, EnvironmentSide.CLIENT, ENTRIES);
   }
 }
